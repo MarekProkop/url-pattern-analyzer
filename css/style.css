@@ -19,8 +19,8 @@
     --border-subtle: rgba(0, 0, 0, 0.12);
     --border-focus: #3f51b5;
 
-    --font-sans: 'Roboto', "Helvetica", "Arial", sans-serif;
-    --font-mono: 'Roboto Mono', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica", "Arial", sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
 
     --radius-lg: 4px;
     --radius-md: 4px;
@@ -202,28 +202,6 @@ textarea::placeholder {
     background: rgba(0, 0, 0, 0.04);
 }
 
-.col-pattern {
-    width: 70%;
-}
-
-.col-pattern code {
-    font-family: var(--font-mono);
-    color: #d32f2f;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 2px 4px;
-    border-radius: 2px;
-    font-size: 0.9rem;
-}
-
-.col-count {
-    width: 15%;
-    text-align: right;
-}
-
-.col-actions {
-    width: 15%;
-    text-align: right;
-}
 
 .btn-icon {
     background: transparent;
@@ -410,10 +388,28 @@ footer {
 }
 
 
-/* Contrast Override */
+/* Pattern Code Styling */
 .col-pattern code {
+    font-family: var(--font-mono);
     color: #b71c1c;
     background: rgba(0, 0, 0, 0.08);
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 0.9rem;
     font-weight: 500;
 }
 
+/* Nested Pattern Indentation */
+.pattern-row.nested {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.pattern-row.nested:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.col-pattern .indent {
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+}

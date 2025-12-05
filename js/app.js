@@ -8,24 +8,41 @@ const collapsedInputSection = document.getElementById('collapsedInputSection');
 const editInputBtn = document.getElementById('editInputBtn');
 const urlCountSummary = document.getElementById('urlCountSummary');
 
+// Validate required DOM elements
+if (!urlInput || !analyzeBtn || !resultsSection || !patternsList ||
+    !patternCount || !inputSection || !collapsedInputSection ||
+    !editInputBtn || !urlCountSummary) {
+    throw new Error('Required DOM elements not found. Check HTML element IDs.');
+}
+
 const analyzer = new UrlAnalyzer();
 
-console.log('UrlAnalyzer initialized');
-
 analyzeBtn.addEventListener('click', () => {
-    console.log('Analyze button clicked');
     const text = urlInput.value;
     if (!text.trim()) return;
 
-    const urls = text.split('\n').filter(u => u.trim().length > 0);
-    const patterns = analyzer.analyze(urls);
+    // Show loading state
+    const btnText = analyzeBtn.querySelector('.btn-text');
+    const originalText = btnText.textContent;
+    btnText.textContent = 'Analyzing...';
+    analyzeBtn.disabled = true;
 
-    renderResults(patterns);
+    // Use setTimeout to allow UI to update before processing
+    setTimeout(() => {
+        const urls = text.split('\n').filter(u => u.trim().length > 0);
+        const patterns = analyzer.analyze(urls);
 
-    // Collapse Input
-    inputSection.classList.add('hidden');
-    collapsedInputSection.classList.remove('hidden');
-    urlCountSummary.textContent = `${urls.length} URLs`;
+        renderResults(patterns);
+
+        // Collapse Input
+        inputSection.classList.add('hidden');
+        collapsedInputSection.classList.remove('hidden');
+        urlCountSummary.textContent = `${urls.length} URLs`;
+
+        // Restore button state
+        btnText.textContent = originalText;
+        analyzeBtn.disabled = false;
+    }, 10);
 });
 
 editInputBtn.addEventListener('click', () => {
@@ -62,9 +79,23 @@ function renderResults(patterns) {
     patterns.forEach(pattern => {
         const row = document.createElement('tr');
         row.className = 'pattern-row';
+        if (pattern.depth > 0) {
+            row.classList.add('nested');
+            row.dataset.depth = pattern.depth;
+        }
 
         const patternCell = document.createElement('td');
         patternCell.className = 'col-pattern';
+
+        // Add indentation for nested patterns
+        if (pattern.depth > 0) {
+            const indent = document.createElement('span');
+            indent.className = 'indent';
+            indent.style.paddingLeft = (pattern.depth * 20) + 'px';
+            indent.textContent = '└─ ';
+            patternCell.appendChild(indent);
+        }
+
         const code = document.createElement('code');
         code.textContent = pattern.pattern;
         patternCell.appendChild(code);
@@ -121,14 +152,14 @@ function toggleDetails(row, urls, btn) {
             list.appendChild(li);
         });
 
+        container.appendChild(list);
+
         if (urls.length > MAX_DISPLAY) {
             const more = document.createElement('div');
             more.className = 'more-urls';
             more.textContent = `...and ${urls.length - MAX_DISPLAY} more`;
             container.appendChild(more);
         }
-
-        container.appendChild(list);
         detailsCell.appendChild(container);
         detailsRow.appendChild(detailsCell);
 

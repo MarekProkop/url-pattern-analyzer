@@ -93,11 +93,34 @@ For each URL:
    * `pos` (integer)
    * `seg` (original string)
 
-Components:
+### **5.2 Phase 2 — Trie Construction**
+
+Build a prefix Trie from all parsed URLs:
+
+1. Each node represents a segment (scheme, host part, or path part).
+2. Traverse each URL's segments sequentially, creating nodes as needed.
+3. Track the count of URLs passing through each node.
+4. Store original URLs at terminal nodes.
+
+### **5.3 Phase 3 — Pattern Extraction**
+
+Traverse the Trie to extract patterns:
+
+1. At each position, collect all distinct segment values for each type (scheme, host, path).
+2. If multiple different values exist at the same position for a type, replace them with the placeholder `…` (dynamic segment).
+3. If only one value exists at a position, keep it literal (static segment).
+4. Group branches with identical masked patterns.
+5. Collect all URLs that match each pattern.
+
+---
+
+## **6. User Interface**
+
+### **6.1 Components**
 
 1. **Title + short description**
 2. **Textarea** to paste URLs
-3. **“Analyze” button**
+3. **"Analyze" button**
 4. **Results section**
 
 ### **6.2 Interaction Flow**
