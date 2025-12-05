@@ -50,7 +50,8 @@ class SitemapFetcher {
                     const xml = await this.fetchXml(url);
                     const parsed = this.parseXml(xml, url);
                     if (parsed.type === 'urlset') {
-                        result.urls.push(...parsed.urls);
+                        // Use concat to avoid stack overflow with large arrays
+                        result.urls = result.urls.concat(parsed.urls);
                     }
                     // Note: Nested indexes not supported to prevent infinite recursion
                 } catch (error) {
@@ -147,6 +148,70 @@ class SitemapFetcher {
             }
         }
         return urls;
+    }
+
+    /**
+     * Check if URL looks like a sitemap (vs a website URL)
+     */
+    isSitemapUrl(url) {
+        try {
+            const path = new URL(url).pathname.toLowerCase();
+            return path.endsWith('.xml') ||
+                   path.endsWith('.xml.gz') ||
+                   path.includes('sitemap');
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Discover sitemaps from robots.txt
+     * @param {string} websiteUrl - Website URL (e.g., https://example.com)
+     * @returns {Promise<{sitemaps: string[], fromRobots: boolean}>}
+     */
+    async discoverSitemaps(websiteUrl) {
+        const baseUrl = new URL(websiteUrl);
+        const robotsUrl = `${baseUrl.origin}/robots.txt`;
+
+        try {
+            const content = await this.fetchText(robotsUrl);
+            const sitemaps = this.parseRobotsTxt(content);
+
+            if (sitemaps.length === 0) {
+                // Fallback: try default sitemap location
+                return { sitemaps: [`${baseUrl.origin}/sitemap.xml`], fromRobots: false };
+            }
+            return { sitemaps, fromRobots: true };
+        } catch {
+            // robots.txt not found - try default location
+            return { sitemaps: [`${baseUrl.origin}/sitemap.xml`], fromRobots: false };
+        }
+    }
+
+    /**
+     * Parse robots.txt and extract Sitemap directives
+     */
+    parseRobotsTxt(content) {
+        const sitemaps = [];
+        const lines = content.split('\n');
+
+        for (const line of lines) {
+            const match = line.match(/^Sitemap:\s*(.+)/i);
+            if (match) {
+                sitemaps.push(match[1].trim());
+            }
+        }
+        return sitemaps;
+    }
+
+    /**
+     * Fetch text content via the proxy (for robots.txt)
+     */
+    async fetchText(url) {
+        const proxyUrl = `${this.proxyUrl}?url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
     }
 
     /**

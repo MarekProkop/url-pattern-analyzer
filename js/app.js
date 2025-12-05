@@ -81,54 +81,92 @@ function switchTab(tab) {
         sitemapTab.classList.remove('active');
         urlsPanel.classList.remove('hidden');
         sitemapPanel.classList.add('hidden');
+        urlInput.focus();
     } else {
         sitemapTab.classList.add('active');
         urlsTab.classList.remove('active');
         sitemapPanel.classList.remove('hidden');
         urlsPanel.classList.add('hidden');
+        sitemapUrlInput.focus();
     }
 }
 
+// Focus input on load
+urlInput.focus();
+
 // Sitemap fetch handler
 fetchSitemapBtn.addEventListener('click', async () => {
-    const sitemapUrl = sitemapUrlInput.value.trim();
+    let inputUrl = sitemapUrlInput.value.trim();
 
-    if (!sitemapUrl) {
-        updateSitemapStatus('error', 'Please enter a sitemap URL');
+    if (!inputUrl) {
+        updateSitemapStatus('error', 'Please enter a URL');
         return;
+    }
+
+    // Add protocol if missing
+    if (!inputUrl.startsWith('http://') && !inputUrl.startsWith('https://')) {
+        inputUrl = 'https://' + inputUrl;
     }
 
     // Reset state
     fetchedUrls = [];
     analyzeSitemapBtn.disabled = true;
     fetchSitemapBtn.disabled = true;
-    updateSitemapStatus('loading', 'Fetching sitemap...');
 
     try {
         const fetcher = new SitemapFetcher(SITEMAP_PROXY_URL);
-        const result = await fetcher.fetchSitemap(sitemapUrl, (progress) => {
-            updateSitemapStatus('loading',
-                `Fetching sitemap ${progress.current} of ${progress.total}... (${progress.urls} URLs found)`
-            );
-        });
+        let allErrors = [];
 
-        fetchedUrls = result.urls;
+        // Determine sitemap URLs to fetch
+        let sitemapUrls;
+        if (fetcher.isSitemapUrl(inputUrl)) {
+            sitemapUrls = [inputUrl];
+            updateSitemapStatus('loading', 'Fetching sitemap...');
+        } else {
+            // Autodiscover from robots.txt
+            updateSitemapStatus('loading', 'Discovering sitemaps from robots.txt...');
+            const discovery = await fetcher.discoverSitemaps(inputUrl);
+            sitemapUrls = discovery.sitemaps;
 
-        if (result.errors.length > 0 && result.urls.length > 0) {
-            // Partial success
+            if (discovery.fromRobots) {
+                updateSitemapStatus('loading',
+                    `Found ${sitemapUrls.length} sitemap(s) in robots.txt. Fetching...`
+                );
+            } else {
+                updateSitemapStatus('loading', 'Trying default sitemap location...');
+            }
+        }
+
+        // Fetch all sitemaps
+        for (let i = 0; i < sitemapUrls.length; i++) {
+            const sitemapUrl = sitemapUrls[i];
+            const result = await fetcher.fetchSitemap(sitemapUrl, (progress) => {
+                const prefix = sitemapUrls.length > 1
+                    ? `Sitemap ${i + 1}/${sitemapUrls.length}: `
+                    : '';
+                updateSitemapStatus('loading',
+                    `${prefix}Fetching ${progress.current} of ${progress.total}... (${fetchedUrls.length + progress.urls} URLs)`
+                );
+            });
+
+            // Use concat to avoid stack overflow with large arrays
+            fetchedUrls = fetchedUrls.concat(result.urls);
+            allErrors = allErrors.concat(result.errors);
+        }
+
+        // Show final status
+        if (allErrors.length > 0 && fetchedUrls.length > 0) {
             updateSitemapStatus('warning',
-                `Found ${result.urls.length} URLs. Some sitemaps failed:`,
-                result.errors
+                `Found ${fetchedUrls.length} URLs. Some sitemaps failed:`,
+                allErrors
             );
-        } else if (result.errors.length > 0) {
-            // Complete failure
+        } else if (allErrors.length > 0) {
             updateSitemapStatus('error',
                 'Failed to fetch sitemap.',
-                result.errors
+                allErrors
             );
         } else {
-            // Complete success
-            updateSitemapStatus('success', `Found ${result.urls.length} URLs`);
+            updateSitemapStatus('success', `Found ${fetchedUrls.length} URLs`);
         }
 
         analyzeSitemapBtn.disabled = fetchedUrls.length === 0;
