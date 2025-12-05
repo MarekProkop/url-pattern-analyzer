@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Pattern Analyzer</title>
+    <meta name="description" content="Analyze and extract patterns from lists of URLs automatically.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>URL Pattern Analyzer</h1>
+            <p class="subtitle">Reverse-engineer routing logic from raw URLs</p>
+        </header>
+
+        <main>
+            <section id="inputSection" class="input-section">
+                <div class="input-wrapper">
+                    <textarea id="urlInput" placeholder="Paste your list of URLs here (one per line)..."
+                        spellcheck="false"></textarea>
+                    <div class="input-actions">
+                        <button id="analyzeBtn" class="btn-primary">
+                            <span class="btn-text">Analyze Patterns</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="collapsedInputSection" class="collapsed-input-section hidden">
+                <div class="collapsed-content">
+                    <div class="collapsed-info">
+                        <span class="icon">📄</span>
+                        <span id="urlCountSummary">0 URLs</span>
+                    </div>
+                    <button id="editInputBtn" class="btn-secondary">Edit Input</button>
+                </div>
+            </section>
+
+            <section id="resultsSection" class="results-section hidden">
+                <div class="results-header">
+                    <h2>Identified Patterns <span id="patternCount" class="badge">0</span></h2>
+                </div>
+                <div id="patternsList" class="patterns-list">
+                    <!-- Pattern cards will be injected here -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Runs entirely in your browser. No data leaves this page.</p>
+        </footer>
+    </div>
+
+    <script src="js/analyzer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
