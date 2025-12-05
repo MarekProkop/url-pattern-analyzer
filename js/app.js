@@ -8,6 +8,21 @@ const collapsedInputSection = document.getElementById('collapsedInputSection');
 const editInputBtn = document.getElementById('editInputBtn');
 const urlCountSummary = document.getElementById('urlCountSummary');
 
+// Sitemap UI elements
+const urlsTab = document.getElementById('urlsTab');
+const sitemapTab = document.getElementById('sitemapTab');
+const urlsPanel = document.getElementById('urlsPanel');
+const sitemapPanel = document.getElementById('sitemapPanel');
+const sitemapUrlInput = document.getElementById('sitemapUrlInput');
+const fetchSitemapBtn = document.getElementById('fetchSitemapBtn');
+const sitemapStatus = document.getElementById('sitemapStatus');
+const statusMessage = document.getElementById('statusMessage');
+const errorList = document.getElementById('errorList');
+const analyzeSitemapBtn = document.getElementById('analyzeSitemapBtn');
+
+// Sitemap proxy URL (Cloudflare Worker)
+const SITEMAP_PROXY_URL = 'https://sitemap-proxy.mprokop.workers.dev';
+
 // Validate required DOM elements
 if (!urlInput || !analyzeBtn || !resultsSection || !patternsList ||
     !patternCount || !inputSection || !collapsedInputSection ||
@@ -16,6 +31,8 @@ if (!urlInput || !analyzeBtn || !resultsSection || !patternsList ||
 }
 
 const analyzer = new UrlAnalyzer();
+let fetchedUrls = []; // Store URLs fetched from sitemap
+let currentTab = 'urls';
 
 analyzeBtn.addEventListener('click', () => {
     const text = urlInput.value;
@@ -49,6 +66,118 @@ editInputBtn.addEventListener('click', () => {
     inputSection.classList.remove('hidden');
     collapsedInputSection.classList.add('hidden');
     resultsSection.classList.add('hidden');
+    // Restore to the tab that was used
+    switchTab(currentTab);
+});
+
+// Tab switching
+urlsTab.addEventListener('click', () => switchTab('urls'));
+sitemapTab.addEventListener('click', () => switchTab('sitemap'));
+
+function switchTab(tab) {
+    currentTab = tab;
+    if (tab === 'urls') {
+        urlsTab.classList.add('active');
+        sitemapTab.classList.remove('active');
+        urlsPanel.classList.remove('hidden');
+        sitemapPanel.classList.add('hidden');
+    } else {
+        sitemapTab.classList.add('active');
+        urlsTab.classList.remove('active');
+        sitemapPanel.classList.remove('hidden');
+        urlsPanel.classList.add('hidden');
+    }
+}
+
+// Sitemap fetch handler
+fetchSitemapBtn.addEventListener('click', async () => {
+    const sitemapUrl = sitemapUrlInput.value.trim();
+
+    if (!sitemapUrl) {
+        updateSitemapStatus('error', 'Please enter a sitemap URL');
+        return;
+    }
+
+    // Reset state
+    fetchedUrls = [];
+    analyzeSitemapBtn.disabled = true;
+    fetchSitemapBtn.disabled = true;
+    updateSitemapStatus('loading', 'Fetching sitemap...');
+
+    try {
+        const fetcher = new SitemapFetcher(SITEMAP_PROXY_URL);
+        const result = await fetcher.fetchSitemap(sitemapUrl, (progress) => {
+            updateSitemapStatus('loading',
+                `Fetching sitemap ${progress.current} of ${progress.total}... (${progress.urls} URLs found)`
+            );
+        });
+
+        fetchedUrls = result.urls;
+
+        if (result.errors.length > 0 && result.urls.length > 0) {
+            // Partial success
+            updateSitemapStatus('warning',
+                `Found ${result.urls.length} URLs. Some sitemaps failed:`,
+                result.errors
+            );
+        } else if (result.errors.length > 0) {
+            // Complete failure
+            updateSitemapStatus('error',
+                'Failed to fetch sitemap.',
+                result.errors
+            );
+        } else {
+            // Complete success
+            updateSitemapStatus('success', `Found ${result.urls.length} URLs`);
+        }
+
+        analyzeSitemapBtn.disabled = fetchedUrls.length === 0;
+
+    } catch (error) {
+        updateSitemapStatus('error', `Error: ${error.message}`);
+    } finally {
+        fetchSitemapBtn.disabled = false;
+    }
+});
+
+function updateSitemapStatus(type, message, errors = []) {
+    sitemapStatus.classList.remove('hidden', 'loading', 'success', 'error', 'warning');
+    sitemapStatus.classList.add(type);
+    statusMessage.textContent = message;
+
+    if (errors.length > 0) {
+        errorList.classList.remove('hidden');
+        errorList.innerHTML = errors.map(e =>
+            `<li><code>${e.url}</code>: ${e.error.message}</li>`
+        ).join('');
+    } else {
+        errorList.classList.add('hidden');
+        errorList.innerHTML = '';
+    }
+}
+
+// Sitemap analyze button handler
+analyzeSitemapBtn.addEventListener('click', () => {
+    if (fetchedUrls.length === 0) return;
+
+    const btnText = analyzeSitemapBtn.querySelector('.btn-text');
+    const originalText = btnText.textContent;
+    btnText.textContent = 'Analyzing...';
+    analyzeSitemapBtn.disabled = true;
+
+    setTimeout(() => {
+        const patterns = analyzer.analyze(fetchedUrls);
+
+        renderResults(patterns);
+
+        // Collapse input
+        inputSection.classList.add('hidden');
+        collapsedInputSection.classList.remove('hidden');
+        urlCountSummary.textContent = `${fetchedUrls.length} URLs (from sitemap)`;
+
+        btnText.textContent = originalText;
+        analyzeSitemapBtn.disabled = false;
+    }, 10);
 });
 
 function renderResults(patterns) {

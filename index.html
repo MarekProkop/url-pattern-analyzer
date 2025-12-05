@@ -23,13 +23,49 @@
 
         <main>
             <section id="inputSection" class="input-section">
-                <div class="input-wrapper">
-                    <textarea id="urlInput" placeholder="Paste your list of URLs here (one per line)..."
-                        spellcheck="false"></textarea>
-                    <div class="input-actions">
-                        <button id="analyzeBtn" class="btn-primary">
-                            <span class="btn-text">Analyze Patterns</span>
-                        </button>
+                <!-- Tab buttons -->
+                <div class="input-tabs">
+                    <button id="urlsTab" class="tab-btn active">Paste URLs</button>
+                    <button id="sitemapTab" class="tab-btn">Fetch from Sitemap</button>
+                </div>
+
+                <!-- URLs panel (existing) -->
+                <div id="urlsPanel" class="tab-panel">
+                    <div class="input-wrapper">
+                        <textarea id="urlInput" placeholder="Paste your list of URLs here (one per line)..."
+                            spellcheck="false"></textarea>
+                        <div class="input-actions">
+                            <button id="analyzeBtn" class="btn-primary">
+                                <span class="btn-text">Analyze Patterns</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sitemap panel (new) -->
+                <div id="sitemapPanel" class="tab-panel hidden">
+                    <div class="input-wrapper">
+                        <!-- Sitemap URL input -->
+                        <div class="sitemap-url-row">
+                            <input type="url" id="sitemapUrlInput"
+                                   placeholder="https://example.com/sitemap.xml"
+                                   class="sitemap-url-input">
+                            <button id="fetchSitemapBtn" class="btn-secondary">Fetch</button>
+                        </div>
+
+                        <!-- Status/progress area -->
+                        <div id="sitemapStatus" class="sitemap-status hidden">
+                            <div class="status-icon"></div>
+                            <div id="statusMessage"></div>
+                            <ul id="errorList" class="error-list hidden"></ul>
+                        </div>
+
+                        <!-- Analyze button for sitemap mode -->
+                        <div class="input-actions">
+                            <button id="analyzeSitemapBtn" class="btn-primary" disabled>
+                                <span class="btn-text">Analyze Patterns</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -60,6 +96,7 @@
     </div>
 
     <script src="js/analyzer.js"></script>
+    <script src="js/sitemap.js"></script>
     <script src="js/app.js"></script>
 </body>
 
