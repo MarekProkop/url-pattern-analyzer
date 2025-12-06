@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const UrlAnalyzer = require('../js/analyzer.js');
+const UrlAnalyzer = require('../site/js/analyzer.js');
 
 /**
  * Helper: Extract just the pattern strings from results
@@ -107,13 +107,30 @@ describe('UrlAnalyzer', () => {
     });
 
     describe('Host handling', () => {
-        test('different subdomains are masked', () => {
+        test('tenant-like subdomains are masked', () => {
             const result = analyzer.analyze([
                 'https://tenant1.app.com/dashboard',
                 'https://tenant2.app.com/dashboard',
                 'https://tenant3.app.com/dashboard'
             ]);
             assert.deepStrictEqual(getPatterns(result), ['https://….app.com/dashboard']);
+        });
+
+        test('meaningful subdomains like www and blog should NOT be masked', () => {
+            const result = analyzer.analyze([
+                'https://www.example.com/page',
+                'https://www.example.com/about',
+                'https://blog.example.com/post',
+                'https://blog.example.com/archive'
+            ]);
+            const patterns = getPatterns(result);
+            // www and blog are meaningful subdomains - they should stay separate
+            assert.ok(patterns.some(p => p.includes('www.example.com')),
+                'Should keep www subdomain: ' + JSON.stringify(patterns));
+            assert.ok(patterns.some(p => p.includes('blog.example.com')),
+                'Should keep blog subdomain: ' + JSON.stringify(patterns));
+            assert.ok(!patterns.some(p => p.includes('….example.com')),
+                'Should NOT mask to ….example.com: ' + JSON.stringify(patterns));
         });
 
         test('different domains create separate patterns', () => {

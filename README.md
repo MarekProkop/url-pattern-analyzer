@@ -5,40 +5,49 @@ Analyze and extract URL patterns from lists of URLs. Useful for reverse-engineer
 ## Features
 
 - Paste URLs directly or fetch from XML sitemaps
+- Auto-discovers sitemaps from robots.txt (just enter a domain)
 - Supports sitemap index files (fetches all linked sitemaps)
 - Identifies common patterns and groups URLs
 - Runs entirely in the browser - no data leaves your machine
 
+## Project Structure
+
+```
+url-patterns/
+├── site/              ← Upload to your web server
+│   ├── index.html
+│   ├── css/
+│   └── js/
+├── worker/            ← Deploy to Cloudflare Workers
+│   └── sitemap-proxy.js
+└── tests/             ← Development only
+```
+
 ## Quick Start
 
-1. Open `index.html` in a browser
+1. Open `site/index.html` in a browser
 2. Paste URLs or use the "Fetch from Sitemap" tab
 3. Click "Analyze Patterns"
 
 ## Deployment
 
-### Static Files
+### Website
 
-Upload these files to any web server:
-- `index.html`
-- `css/style.css`
-- `js/analyzer.js`
-- `js/sitemap.js`
-- `js/app.js`
+Upload the entire `site/` folder to your web server.
 
-### Cloudflare Worker (for sitemap fetching)
+### Cloudflare Worker
 
-The sitemap fetch feature requires a proxy to bypass CORS. Deploy the worker:
+The sitemap fetch feature requires a proxy to bypass CORS:
 
 1. Create a [Cloudflare account](https://cloudflare.com)
 2. Go to **Workers & Pages** → **Create Worker**
 3. Replace the code with contents of `worker/sitemap-proxy.js`
 4. Click **Deploy**
-5. Update `SITEMAP_PROXY_URL` in `js/app.js` with your worker URL
+5. Update `SITEMAP_PROXY_URL` in `site/js/app.js` with your worker URL
 
-#### Securing the Worker (Production)
+#### Securing the Worker
 
-Uncomment and configure the `allowedOrigins` section in `worker/sitemap-proxy.js` to restrict access to your domain only.
+For production, restrict the worker to your domain only. Add origin checking at the top of the fetch handler in `worker/sitemap-proxy.js`.
 
 ## Development
 

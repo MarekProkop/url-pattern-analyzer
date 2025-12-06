@@ -96,77 +96,41 @@ urlInput.focus();
 
 // Sitemap fetch handler
 fetchSitemapBtn.addEventListener('click', async () => {
-    let inputUrl = sitemapUrlInput.value.trim();
+    const inputUrl = sitemapUrlInput.value.trim();
 
     if (!inputUrl) {
         updateSitemapStatus('error', 'Please enter a URL');
         return;
     }
 
-    // Add protocol if missing
-    if (!inputUrl.startsWith('http://') && !inputUrl.startsWith('https://')) {
-        inputUrl = 'https://' + inputUrl;
-    }
-
     // Reset state
     fetchedUrls = [];
     analyzeSitemapBtn.disabled = true;
     fetchSitemapBtn.disabled = true;
+    updateSitemapStatus('loading', 'Fetching sitemaps...');
 
     try {
         const fetcher = new SitemapFetcher(SITEMAP_PROXY_URL);
-        let allErrors = [];
+        const result = await fetcher.fetchUrls(inputUrl);
 
-        // Determine sitemap URLs to fetch
-        let sitemapUrls;
-        if (fetcher.isSitemapUrl(inputUrl)) {
-            sitemapUrls = [inputUrl];
-            updateSitemapStatus('loading', 'Fetching sitemap...');
-        } else {
-            // Autodiscover from robots.txt
-            updateSitemapStatus('loading', 'Discovering sitemaps from robots.txt...');
-            const discovery = await fetcher.discoverSitemaps(inputUrl);
-            sitemapUrls = discovery.sitemaps;
-
-            if (discovery.fromRobots) {
-                updateSitemapStatus('loading',
-                    `Found ${sitemapUrls.length} sitemap(s) in robots.txt. Fetching...`
-                );
-            } else {
-                updateSitemapStatus('loading', 'Trying default sitemap location...');
-            }
-        }
-
-        // Fetch all sitemaps
-        for (let i = 0; i < sitemapUrls.length; i++) {
-            const sitemapUrl = sitemapUrls[i];
-            const result = await fetcher.fetchSitemap(sitemapUrl, (progress) => {
-                const prefix = sitemapUrls.length > 1
-                    ? `Sitemap ${i + 1}/${sitemapUrls.length}: `
-                    : '';
-                updateSitemapStatus('loading',
-                    `${prefix}Fetching ${progress.current} of ${progress.total}... (${fetchedUrls.length + progress.urls} URLs)`
-                );
-            });
-
-            // Use concat to avoid stack overflow with large arrays
-            fetchedUrls = fetchedUrls.concat(result.urls);
-            allErrors = allErrors.concat(result.errors);
-        }
+        fetchedUrls = result.urls;
 
         // Show final status
-        if (allErrors.length > 0 && fetchedUrls.length > 0) {
+        if (result.errors.length > 0 && result.urls.length > 0) {
             updateSitemapStatus('warning',
-                `Found ${fetchedUrls.length} URLs. Some sitemaps failed:`,
-                allErrors
+                `Found ${result.urls.length} URLs from ${result.sitemapCount} sitemap(s). Some failed:`,
+                result.errors
             );
-        } else if (allErrors.length > 0) {
+        } else if (result.errors.length > 0) {
             updateSitemapStatus('error',
                 'Failed to fetch sitemap.',
-                allErrors
+                result.errors
             );
         } else {
-            updateSitemapStatus('success', `Found ${fetchedUrls.length} URLs`);
+            const sitemapText = result.sitemapCount === 1 ? 'sitemap' : 'sitemaps';
+            updateSitemapStatus('success',
+                `Found ${result.urls.length} URLs from ${result.sitemapCount} ${sitemapText}`
+            );
         }
 
         analyzeSitemapBtn.disabled = fetchedUrls.length === 0;

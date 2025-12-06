@@ -5,10 +5,14 @@
 class UrlAnalyzer {
     constructor() {
         this.placeholder = '…';
-        // Only mask subdomains if there are this many or fewer distinct values
-        // This prevents merging different sites (shop, blog, api) but allows
-        // merging tenant variations (tenant1, tenant2, tenant3)
-        this.hostMaskThreshold = 3;
+        // Subdomains that indicate distinct site sections - never mask these
+        this.meaningfulSubdomains = new Set([
+            'www', 'blog', 'shop', 'store', 'api', 'cdn', 'static', 'assets',
+            'mail', 'email', 'admin', 'app', 'dashboard', 'portal', 'support',
+            'help', 'docs', 'developer', 'developers', 'dev', 'staging', 'test',
+            'm', 'mobile', 'secure', 'account', 'accounts', 'auth', 'login',
+            'images', 'img', 'media', 'video', 'news', 'forum', 'community'
+        ]);
     }
 
     /**
@@ -206,15 +210,13 @@ class UrlAnalyzer {
                     );
                 }
             } else if (type === 'subdomain') {
-                // Subdomains: mask only if few distinct values (tenant variations)
-                if (children.length <= this.hostMaskThreshold) {
-                    const mergedNode = this.mergeNodes(children);
-                    this.collectPatterns(
-                        mergedNode,
-                        [...pathStack, { val: this.placeholder, type }],
-                        patternsMap
-                    );
-                } else {
+                // Check if any subdomain is "meaningful" (www, blog, api, etc.)
+                const hasMeaningful = children.some(c =>
+                    this.meaningfulSubdomains.has(c.value.toLowerCase())
+                );
+
+                if (hasMeaningful) {
+                    // Keep meaningful subdomains separate
                     for (const child of children) {
                         this.collectPatterns(
                             child,
@@ -222,6 +224,14 @@ class UrlAnalyzer {
                             patternsMap
                         );
                     }
+                } else {
+                    // Tenant-like subdomains (tenant1, tenant2) - mask them
+                    const mergedNode = this.mergeNodes(children);
+                    this.collectPatterns(
+                        mergedNode,
+                        [...pathStack, { val: this.placeholder, type }],
+                        patternsMap
+                    );
                 }
             } else if (type === 'path') {
                 // Paths: split into unique (count=1) and repeated (count>1)
