@@ -1,0 +1,25 @@
+{
+  "name": "url-pattern-analyzer",
+  "version": "1.0.0",
+  "description": "Analyze and extract URL patterns from lists of URLs",
+  "keywords": [
+    "url",
+    "pattern",
+    "analyzer",
+    "sitemap",
+    "seo"
+  ],
+  "homepage": "https://www.prokopsw.cz/app/url-patterns/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MarekProkop/url-pattern-analyzer.git"
+  },
+  "license": "MIT",
+  "author": "Miroslav Prokop",
+  "scripts": {
+    "test": "node --test tests/analyzer.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
