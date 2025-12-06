@@ -6,21 +6,35 @@
  * - If URL is a domain: fetches robots.txt, discovers sitemaps
  * - If URL is a sitemap: fetches it directly
  * - Returns JSON: { urls: [...], errors: [...], sitemapCount: N }
+ *
+ * IMPORTANT: If you're self-hosting this app, deploy your own worker
+ * and update the ALLOWED_ORIGIN below to match your domain.
  */
+
+// Configure this to your domain when deploying your own worker
+const ALLOWED_ORIGIN = 'https://www.prokopsw.cz';
 
 export default {
   async fetch(request) {
-    const url = new URL(request.url).searchParams.get('url');
+    const origin = request.headers.get('Origin');
 
+    // Check if the request is from an allowed origin
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin === ALLOWED_ORIGIN ? ALLOWED_ORIGIN : '',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     };
 
+    // Reject requests from unauthorized origins
+    if (origin && origin !== ALLOWED_ORIGIN) {
+      return jsonResponse({ error: 'Unauthorized origin' }, 403, corsHeaders);
+    }
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
     }
+
+    const url = new URL(request.url).searchParams.get('url');
 
     if (!url) {
       return jsonResponse({ error: 'Missing url parameter' }, 400, corsHeaders);
