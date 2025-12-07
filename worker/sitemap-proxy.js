@@ -14,6 +14,10 @@
 // Configure this to your domain when deploying your own worker
 const ALLOWED_ORIGIN = 'https://www.prokopsw.cz';
 
+// Limits to prevent timeouts on very large sitemaps
+const MAX_CHILD_SITEMAPS = 50;
+const MAX_TOTAL_URLS = 300000;
+
 export default {
   async fetch(request) {
     const origin = request.headers.get('Origin');
@@ -86,9 +90,30 @@ async function discoverAndFetch(inputUrl) {
       } else {
         result.sitemapCount++;
         if (r.type === 'urlset') {
-          result.urls = result.urls.concat(r.urls);
+          // Check URL limit
+          const remaining = MAX_TOTAL_URLS - result.urls.length;
+          if (remaining <= 0) {
+            result.errors.push({
+              url: 'limit',
+              error: `URL limit reached (${MAX_TOTAL_URLS.toLocaleString()}). Some URLs were not collected.`
+            });
+            return result;
+          }
+          const urlsToAdd = r.urls.slice(0, remaining);
+          result.urls = result.urls.concat(urlsToAdd);
         } else if (r.type === 'sitemapindex') {
-          const childResults = await fetchChildSitemaps(r.sitemaps, concurrency);
+          // Refuse if too many child sitemaps
+          if (r.sitemaps.length > MAX_CHILD_SITEMAPS) {
+            return {
+              urls: [],
+              errors: [{
+                url: r.url,
+                error: `Sitemap index contains ${r.sitemaps.length} sitemaps (limit: ${MAX_CHILD_SITEMAPS}). Use the "Paste URLs" tab instead.`
+              }],
+              sitemapCount: 0
+            };
+          }
+          const childResults = await fetchChildSitemaps(r.sitemaps, concurrency, result.urls.length);
           result.urls = result.urls.concat(childResults.urls);
           result.errors = result.errors.concat(childResults.errors);
           result.sitemapCount += childResults.count;
@@ -166,10 +191,12 @@ function parseSitemap(xml, url) {
   return { url, error: 'Not a valid sitemap' };
 }
 
-async function fetchChildSitemaps(sitemapUrls, concurrency) {
+async function fetchChildSitemaps(sitemapUrls, concurrency, currentUrlCount = 0) {
   const result = { urls: [], errors: [], count: 0 };
+  let totalUrls = currentUrlCount;
+  let limitReached = false;
 
-  for (let i = 0; i < sitemapUrls.length; i += concurrency) {
+  for (let i = 0; i < sitemapUrls.length && !limitReached; i += concurrency) {
     const batch = sitemapUrls.slice(i, i + concurrency);
     const results = await Promise.all(batch.map(fetchSitemap));
 
@@ -178,7 +205,20 @@ async function fetchChildSitemaps(sitemapUrls, concurrency) {
         result.errors.push({ url: r.url, error: r.error });
       } else if (r.type === 'urlset') {
         result.count++;
-        result.urls = result.urls.concat(r.urls);
+        // Check if adding these URLs would exceed limit
+        const remaining = MAX_TOTAL_URLS - totalUrls;
+        if (remaining <= 0) {
+          result.errors.push({
+            url: 'limit',
+            error: `URL limit reached (${MAX_TOTAL_URLS.toLocaleString()}). Some URLs were not collected.`
+          });
+          limitReached = true;
+          break;
+        }
+        // Add URLs up to the limit
+        const urlsToAdd = r.urls.slice(0, remaining);
+        result.urls = result.urls.concat(urlsToAdd);
+        totalUrls += urlsToAdd.length;
       }
     }
   }

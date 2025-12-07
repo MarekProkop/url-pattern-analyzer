@@ -12,6 +12,13 @@ Analyze and extract URL patterns from lists of URLs. Useful for reverse-engineer
 - Identifies common patterns and groups URLs
 - Runs entirely in the browser - no data leaves your machine
 
+## Limitations
+
+The sitemap fetching feature has the following limits:
+
+- **Maximum 50 sitemaps** - Sitemap indexes with more than 50 child sitemaps are not supported. Use the "Paste URLs" tab instead.
+- **Maximum 300,000 URLs** - If a sitemap contains more URLs, only the first 300,000 will be collected.
+
 ## For Users
 
 The easiest way to use this tool is via the **[live demo](https://www.prokopsw.cz/app/url-patterns/)**.

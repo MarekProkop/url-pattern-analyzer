@@ -116,11 +116,15 @@ fetchSitemapBtn.addEventListener('click', async () => {
         fetchedUrls = result.urls;
 
         // Show final status
+        const hasLimitWarning = result.errors.some(e =>
+            e.url === 'limit' || (typeof e.error === 'string' && e.error.includes('limit'))
+        );
+
         if (result.errors.length > 0 && result.urls.length > 0) {
-            updateSitemapStatus('warning',
-                `Found ${result.urls.length} URLs from ${result.sitemapCount} sitemap(s). Some failed:`,
-                result.errors
-            );
+            const message = hasLimitWarning
+                ? `Found ${result.urls.length.toLocaleString()} URLs (some skipped due to size limits).`
+                : `Found ${result.urls.length.toLocaleString()} URLs from ${result.sitemapCount} sitemap(s). Some failed:`;
+            updateSitemapStatus('warning', message, result.errors);
         } else if (result.errors.length > 0) {
             updateSitemapStatus('error',
                 'Failed to fetch sitemap.',
@@ -149,9 +153,10 @@ function updateSitemapStatus(type, message, errors = []) {
 
     if (errors.length > 0) {
         errorList.classList.remove('hidden');
-        errorList.innerHTML = errors.map(e =>
-            `<li><code>${e.url}</code>: ${e.error.message}</li>`
-        ).join('');
+        errorList.innerHTML = errors.map(e => {
+            const errorMsg = typeof e.error === 'string' ? e.error : e.error.message;
+            return `<li><code>${e.url}</code>: ${errorMsg}</li>`;
+        }).join('');
     } else {
         errorList.classList.add('hidden');
         errorList.innerHTML = '';
